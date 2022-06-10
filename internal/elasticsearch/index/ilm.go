@@ -125,6 +125,12 @@ var supportedActions = map[string]*schema.Schema{
 					Optional:    true,
 					Default:     0,
 				},
+				"total_shards_per_node": {
+					Description: "The maximum number of shards for the index on a single Elasticsearch node. Defaults to `-1` (unlimited)",
+					Type:        schema.TypeInt,
+					Optional:    true,
+					Default:     -1,
+				},
 				"include": {
 					Description:      "Assigns an index to nodes that have at least one of the specified custom attributes. Must be valid JSON document.",
 					Type:             schema.TypeString,
@@ -443,7 +449,7 @@ func expandPhase(p map[string]interface{}, d *schema.ResourceData) (*models.Phas
 		if a := action.([]interface{}); len(a) > 0 {
 			switch actionName {
 			case "allocate":
-				actions[actionName], diags = expandAction(a, "number_of_replicas", "include", "exclude", "require")
+				actions[actionName], diags = expandAction(a, "number_of_replicas", "total_shards_per_node", "include", "exclude", "require")
 			case "delete":
 				actions[actionName], diags = expandAction(a, "delete_searchable_snapshot")
 			case "forcemerge":
@@ -501,7 +507,11 @@ func expandAction(a []interface{}, settings ...string) (map[string]interface{}, 
 	def := make(map[string]interface{})
 
 	// can be zero, so we must skip the empty check
-	settingsToSkip := map[string]struct{}{"number_of_replicas": struct{}{}, "priority": struct{}{}}
+	settingsToSkip := map[string]struct{}{
+		"number_of_replicas":    struct{}{},
+		"total_shards_per_node": struct{}{},
+		"priority":              struct{}{},
+	}
 
 	if action := a[0]; action != nil {
 		for _, setting := range settings {
@@ -615,6 +625,9 @@ func flattenPhase(phaseName string, p models.Phase, d *schema.ResourceData) (int
 			allocateAction := make(map[string]interface{})
 			if v, ok := action["number_of_replicas"]; ok {
 				allocateAction["number_of_replicas"] = v
+			}
+			if v, ok := action["total_shards_per_node"]; ok {
+				allocateAction["total_shards_per_node"] = v
 			}
 			for _, f := range []string{"include", "require", "exclude"} {
 				if v, ok := action[f]; ok {
