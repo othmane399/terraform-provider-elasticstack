@@ -423,7 +423,7 @@ func expandIlmPolicy(d *schema.ResourceData) (*models.Policy, diag.Diagnostics) 
 
 	for _, ph := range supportedIlmPhases {
 		if v, ok := d.GetOk(ph); ok {
-			phase, diags := expandPhase(v.([]interface{})[0].(map[string]interface{}), d)
+			phase, diags := expandPhase(ph, v.([]interface{})[0].(map[string]interface{}), d)
 			if diags.HasError() {
 				return nil, diags
 			}
@@ -435,7 +435,7 @@ func expandIlmPolicy(d *schema.ResourceData) (*models.Policy, diag.Diagnostics) 
 	return &policy, diags
 }
 
-func expandPhase(p map[string]interface{}, d *schema.ResourceData) (*models.Phase, diag.Diagnostics) {
+func expandPhase(phaseName string, p map[string]interface{}, d *schema.ResourceData) (*models.Phase, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var phase models.Phase
 
@@ -447,46 +447,49 @@ func expandPhase(p map[string]interface{}, d *schema.ResourceData) (*models.Phas
 	actions := make(map[string]models.Action)
 	for actionName, action := range p {
 		if a := action.([]interface{}); len(a) > 0 {
+			hasChange := func(setting string) bool {
+				return d.HasChange(fmt.Sprintf("%s.0.%s.0.%s", phaseName, actionName, setting))
+			}
 			switch actionName {
 			case "allocate":
-				actions[actionName], diags = expandAction(a, "number_of_replicas", "total_shards_per_node", "include", "exclude", "require")
+				actions[actionName], diags = expandAction(a, hasChange, "number_of_replicas", "total_shards_per_node", "include", "exclude", "require")
 			case "delete":
-				actions[actionName], diags = expandAction(a, "delete_searchable_snapshot")
+				actions[actionName], diags = expandAction(a, hasChange, "delete_searchable_snapshot")
 			case "forcemerge":
-				actions[actionName], diags = expandAction(a, "max_num_segments", "index_codec")
+				actions[actionName], diags = expandAction(a, hasChange, "max_num_segments", "index_codec")
 			case "freeze":
 				if a[0] != nil {
 					ac := a[0].(map[string]interface{})
 					if ac["enabled"].(bool) {
-						actions[actionName], diags = expandAction(a)
+						actions[actionName], diags = expandAction(a, hasChange)
 					}
 				}
 			case "migrate":
-				actions[actionName], diags = expandAction(a, "enabled")
+				actions[actionName], diags = expandAction(a, hasChange, "enabled")
 			case "readonly":
 				if a[0] != nil {
 					ac := a[0].(map[string]interface{})
 					if ac["enabled"].(bool) {
-						actions[actionName], diags = expandAction(a)
+						actions[actionName], diags = expandAction(a, hasChange)
 					}
 				}
 			case "rollover":
-				actions[actionName], diags = expandAction(a, "max_age", "max_docs", "max_size", "max_primary_shard_size")
+				actions[actionName], diags = expandAction(a, hasChange, "max_age", "max_docs", "max_size", "max_primary_shard_size")
 			case "searchable_snapshot":
-				actions[actionName], diags = expandAction(a, "snapshot_repository", "force_merge_index")
+				actions[actionName], diags = expandAction(a, hasChange, "snapshot_repository", "force_merge_index")
 			case "set_priority":
-				actions[actionName], diags = expandAction(a, "priority")
+				actions[actionName], diags = expandAction(a, hasChange, "priority")
 			case "shrink":
-				actions[actionName], diags = expandAction(a, "number_of_shards", "max_primary_shard_size")
+				actions[actionName], diags = expandAction(a, hasChange, "number_of_shards", "max_primary_shard_size")
 			case "unfollow":
 				if a[0] != nil {
 					ac := a[0].(map[string]interface{})
 					if ac["enabled"].(bool) {
-						actions[actionName], diags = expandAction(a)
+						actions[actionName], diags = expandAction(a, hasChange)
 					}
 				}
 			case "wait_for_snapshot":
-				actions[actionName], diags = expandAction(a, "policy")
+				actions[actionName], diags = expandAction(a, hasChange, "policy")
 			default:
 				diags = append(diags, diag.Diagnostic{
 					Severity: diag.Error,
@@ -502,20 +505,20 @@ func expandPhase(p map[string]interface{}, d *schema.ResourceData) (*models.Phas
 	return &phase, diags
 }
 
-func expandAction(a []interface{}, settings ...string) (map[string]interface{}, diag.Diagnostics) {
+func expandAction(a []interface{}, hasChange func(string) bool, settings ...string) (map[string]interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	def := make(map[string]interface{})
 
 	// can be zero, so we must skip the empty check
 	settingsToSkip := map[string]struct{}{
-		"number_of_replicas":    struct{}{},
-		"total_shards_per_node": struct{}{},
-		"priority":              struct{}{},
+		"number_of_replicas":    {},
+		"total_shards_per_node": {},
+		"priority":              {},
 	}
 
 	if action := a[0]; action != nil {
 		for _, setting := range settings {
-			if v, ok := action.(map[string]interface{})[setting]; ok && v != nil {
+			if v, ok := action.(map[string]interface{})[setting]; ok && v != nil && hasChange(setting) {
 				if _, ok := settingsToSkip[setting]; ok || !utils.IsEmpty(v) {
 					// these 3 fields must be treated as JSON objects
 					if setting == "include" || setting == "exclude" || setting == "require" {
