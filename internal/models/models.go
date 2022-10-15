@@ -187,3 +187,9 @@ type DataStreamIndex struct {
 type TimestampField struct {
 	Name string `json:"name"`
 }
+
+type Watch struct {
+	WatchID string                 `json:"watch_id"`
+	Active  bool                   `json:"active"`
+	Body    map[string]interface{} `json:"body"`
+}
