@@ -188,6 +188,16 @@ type TimestampField struct {
 	Name string `json:"name"`
 }
 
+type LogstashPipeline struct {
+	PipelineID       string                 `json:"-"`
+	Description      string                 `json:"description,omitempty"`
+	LastModified     string                 `json:"last_modified"`
+	Pipeline         string                 `json:"pipeline"`
+	PipelineMetadata map[string]interface{} `json:"pipeline_metadata"`
+	PipelineSettings map[string]interface{} `json:"pipeline_settings"`
+	Username         string                 `json:"username"`
+}
+
 type Watch struct {
 	WatchID string                 `json:"watch_id"`
 	Active  bool                   `json:"active"`

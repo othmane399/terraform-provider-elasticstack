@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Added
+- New resource `elasticstack_elasticsearch_logstash_pipeline` to manage Logstash pipelines ([Centralized Pipeline Management](https://www.elastic.co/guide/en/logstash/current/logstash-centralized-pipeline-management.html)) ([#151](https://github.com/elastic/terraform-provider-elasticstack/pull/151))
+
 ## [0.4.0] - 2022-10-07
 ### Added
 
@@ -69,7 +72,8 @@
 - Initial set of docs
 - CI integration
 
-[Unreleased]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/elastic/terraform-provider-elasticstack/compare/v0.3.0...v0.3.1
